@@ -1,0 +1,805 @@
+<!doctype html><html><head><meta charset=utf8><meta name=viewport content="width=device-width,initial-scale=1,viewport-fit=cover"><style>:root{color-scheme:light;box-sizing:border-box;padding-top:env(safe-area-inset-top,0px);padding-bottom:env(safe-area-inset-bottom,0px)}html{scroll-padding-top:env(safe-area-inset-top,0px)}body{margin:0;padding:0;font:14px -apple-system,BlinkMacSystemFont,sans-serif;background:#fff;color:#000}img{max-width:100%}[hidden]:not([hidden=until-found i]){display:none!important}</style></head><body>
+<title>Turnover Swing</title>
+<meta name="claude:viewport-fit-sides" content="cover">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Barlow:wght@400;500;600;700&family=Big+Shoulders+Display:wght@700;800;900&family=IBM+Plex+Mono:wght@400;500&display=swap">
+<style>
+/* Layout: situation controls on the left; the broadcast-style swing card and its breakdown on the right; the algorithm laid out underneath. */
+:root{
+  --bg:#E7ECF2; --surface:#F8FAFC; --ink:#0D1A2C; --muted:#586577; --line:#C8D1DC; --track:#CBD4DF;
+  --accent:#C9321D; --los:#1D5FD3; --first:#E2AE00;
+  --card:#0B1627; --card-ink:#F3F6FA; --card-muted:#9DABBD; --card-line:#243653;
+  --c-before:#6EA2FF; --c-after:#FF6049;
+  --field:#D9E2EC; --field-ez:#C3CFDC;
+  --t1:#9FB0C4; --t2:#F2B705; --t3:#FF8A1F; --t4:#FF4B33; --t5:#FF2D6F;
+  --display:"Big Shoulders Display","Arial Narrow",Impact,sans-serif;
+  --body:"Barlow",system-ui,-apple-system,"Segoe UI",sans-serif;
+  --mono:"IBM Plex Mono",ui-monospace,SFMono-Regular,Menlo,monospace;
+}
+@media (prefers-color-scheme: dark){
+  :root:not([data-theme="light"]){
+    --bg:#09111C; --surface:#101B2C; --ink:#E7EDF5; --muted:#91A0B3; --line:#25364D; --track:#2A3C55;
+    --accent:#FF6049; --los:#5B95FF; --first:#F2C21B;
+    --card:#15263F; --card-line:#2E4468;
+    --field:#14243A; --field-ez:#0E1B2E;
+    color-scheme:dark;
+  }
+}
+:root[data-theme="dark"]{
+  --bg:#09111C; --surface:#101B2C; --ink:#E7EDF5; --muted:#91A0B3; --line:#25364D; --track:#2A3C55;
+  --accent:#FF6049; --los:#5B95FF; --first:#F2C21B;
+  --card:#15263F; --card-line:#2E4468;
+  --field:#14243A; --field-ez:#0E1B2E;
+  color-scheme:dark;
+}
+
+*,*::before,*::after{box-sizing:border-box}
+body{background:var(--bg);color:var(--ink);font-family:var(--body);font-size:15px;line-height:1.45}
+body::before{content:"";position:fixed;inset:0 0 auto;height:env(safe-area-inset-top,0px);z-index:40;background:var(--bg)}
+h1,h2,h3,p,ol,ul,figure,pre{margin:0}
+button{font-family:inherit}
+:focus-visible{outline:2px solid var(--los);outline-offset:2px}
+
+.wrap{max-width:1180px;margin-inline:auto;padding-left:max(16px,env(safe-area-inset-left,0px));padding-right:max(16px,env(safe-area-inset-right,0px))}
+.head-wrap{padding-block:28px 14px}
+.main-wrap{padding-block:18px 72px}
+.head{display:grid;gap:12px}
+h1{font:900 clamp(46px,9vw,92px)/.86 var(--display);text-transform:uppercase;letter-spacing:.004em;text-wrap:balance}
+h1 em{font-style:normal;color:var(--accent)}
+.head p{max-width:58ch;color:var(--muted);font-size:16px}
+
+/* sticky readout for narrow screens */
+.mini{display:none}
+.mini-in{display:flex;align-items:baseline;gap:10px;padding-block:7px;padding-left:max(16px,env(safe-area-inset-left,0px));padding-right:max(16px,env(safe-area-inset-right,0px))}
+.mini-k{font:800 13px var(--display);letter-spacing:.14em;text-transform:uppercase;color:var(--card-muted)}
+.mini-n{font:900 34px/1 var(--display);color:var(--tier,var(--t1))}
+.mini-t{font:800 16px var(--display);letter-spacing:.06em;text-transform:uppercase}
+.mini-w{margin-left:auto;font:500 12px var(--mono);color:var(--card-muted);white-space:nowrap}
+@media (max-width:939px){
+  .mini{display:block;position:sticky;top:env(safe-area-inset-top,0px);z-index:30;background:var(--card);color:var(--card-ink);border-bottom:1px solid var(--card-line)}
+}
+
+.grid{display:grid;gap:28px;grid-template-columns:minmax(0,1fr)}
+@media (min-width:940px){.grid{grid-template-columns:minmax(0,5fr) minmax(0,6fr);gap:36px;align-items:start}}
+.rail,.out{min-width:0}
+
+/* presets */
+.presets{display:grid;gap:8px;margin-bottom:14px}
+.lab{font:700 13px var(--display);letter-spacing:.14em;text-transform:uppercase;color:var(--muted)}
+.chips{display:flex;flex-wrap:wrap;gap:8px}
+.chips button{appearance:none;border:1px solid var(--line);background:var(--surface);color:var(--ink);font:700 15px var(--display);letter-spacing:.06em;text-transform:uppercase;padding:7px 11px;border-radius:3px;cursor:pointer}
+.chips button:hover{border-color:var(--ink)}
+.chips button[aria-pressed="true"]{background:var(--ink);color:var(--surface);border-color:var(--ink)}
+
+/* controls */
+.panel{background:var(--surface);border:1px solid var(--line);border-radius:6px}
+.grp{padding:16px 18px 18px;border-top:1px solid var(--line);display:grid;gap:14px}
+.grp:first-child{border-top:0}
+.gh{font:800 17px var(--display);letter-spacing:.1em;text-transform:uppercase}
+.ctl{display:grid;gap:6px}
+.cl{display:flex;justify-content:space-between;align-items:baseline;gap:12px;font-size:13px;color:var(--muted)}
+.cl output{font:500 13px var(--mono);color:var(--ink);text-align:right}
+.note{font-size:13px;color:var(--muted)}
+.seg{display:flex;border:1px solid var(--line);border-radius:4px;overflow:hidden;background:var(--surface)}
+.seg button{flex:1;min-width:0;appearance:none;border:0;border-right:1px solid var(--line);background:transparent;color:var(--ink);font:600 14px var(--body);padding:9px 6px;cursor:pointer;white-space:nowrap}
+.seg button:last-child{border-right:0}
+.seg button[aria-checked="true"]{background:var(--ink);color:var(--surface)}
+.seg button:disabled{opacity:.38;cursor:not-allowed}
+.seg button:focus-visible{outline-offset:-3px}
+
+input[type=range]{-webkit-appearance:none;appearance:none;width:100%;height:28px;margin:0;background:transparent;cursor:pointer}
+input[type=range]::-webkit-slider-runnable-track{height:6px;border-radius:3px;background:linear-gradient(to right,var(--los) var(--p,0%),var(--track) var(--p,0%))}
+input[type=range]::-moz-range-track{height:6px;border-radius:3px;background:var(--track)}
+input[type=range]::-moz-range-progress{height:6px;border-radius:3px;background:var(--los)}
+input[type=range]::-webkit-slider-thumb{-webkit-appearance:none;box-sizing:border-box;width:20px;height:20px;margin-top:-7px;border-radius:50%;background:var(--surface);border:3px solid var(--ink)}
+input[type=range]::-moz-range-thumb{box-sizing:border-box;width:20px;height:20px;border-radius:50%;background:var(--surface);border:3px solid var(--ink)}
+#s-m::-moz-range-progress{background:var(--track)}
+
+/* field */
+.field{margin-top:18px}
+.field svg{display:block;width:100%;height:auto;border-radius:4px}
+.f-turf{fill:var(--field)} .f-ez{fill:var(--field-ez)}
+.f-line{stroke:var(--line);stroke-width:1} .f-goal{stroke:var(--muted);stroke-width:2}
+.f-num{fill:var(--muted);font:500 10px var(--mono)}
+.f-los{stroke:var(--los);stroke-width:3} .f-ball{fill:var(--los);stroke:var(--surface);stroke-width:2}
+.f-ltg{stroke:var(--first);stroke-width:3}
+.f-arc{fill:none;stroke:var(--muted);stroke-width:1.5;stroke-dasharray:4 4}
+.f-x{fill:none;stroke:var(--ink);stroke-width:2.5;stroke-linecap:round}
+.f-drop{stroke:var(--muted);stroke-width:1.5;stroke-dasharray:2 3}
+.f-tb{stroke:var(--accent);stroke-width:2;stroke-dasharray:4 4}
+.f-ret{stroke:var(--accent);stroke-width:3;stroke-linecap:round}
+.f-head{fill:var(--accent)} .f-def{fill:var(--accent);stroke:var(--surface);stroke-width:2}
+.f-td{fill:var(--accent);font:700 12px var(--body)}
+.fleg{display:flex;flex-wrap:wrap;gap:6px 16px;margin-top:8px;font-size:12px;color:var(--muted)}
+.k{display:inline-block;width:14px;height:0;border-top:3px solid;vertical-align:middle;margin-right:6px}
+.k-los{border-color:var(--los)} .k-ltg{border-color:var(--first)}
+.k-def{width:10px;height:10px;border:0;border-radius:50%;background:var(--accent)}
+.fleg .dir{margin-left:auto}
+
+/* result card */
+.card{--tier:var(--t1);background:var(--card);color:var(--card-ink);border:1px solid var(--card-line);border-radius:8px;padding:18px 20px 22px;display:grid;gap:20px}
+.card-head{display:flex;justify-content:space-between;align-items:baseline;gap:6px 14px;flex-wrap:wrap}
+.eyebrow{font:800 15px var(--display);letter-spacing:.14em;text-transform:uppercase;color:var(--card-muted)}
+.sit{font:500 12px var(--mono);color:var(--card-muted)}
+.card-body{display:flex;flex-wrap:wrap;align-items:flex-end;gap:12px 24px}
+.numblk{display:flex;align-items:flex-end;gap:8px}
+.num{font:900 clamp(104px,22vw,172px)/.78 var(--display);color:var(--tier);letter-spacing:-.01em}
+.of{font:500 13px var(--mono);color:var(--card-muted);padding-bottom:4px}
+.tierblk{flex:1 1 200px;min-width:0;display:grid;gap:6px}
+.tier-name{font:900 clamp(32px,5vw,46px)/.92 var(--display);text-transform:uppercase;letter-spacing:.01em}
+.headline{font-size:15px;color:var(--card-ink)}
+.lev{font:500 12px var(--mono);color:var(--card-muted)}
+
+.meter{position:relative;padding-top:12px}
+.bands{display:flex;height:10px;border-radius:2px;overflow:hidden}
+.bands i{display:block;height:100%;opacity:.32;box-shadow:inset -2px 0 0 var(--card);transition:opacity .25s}
+.bands i.on{opacity:1}
+.ticks{position:relative;height:16px;margin-top:6px;font:500 11px var(--mono);color:var(--card-muted)}
+.ticks span{position:absolute;top:0}
+.mark{position:absolute;top:0;left:0;width:2px;height:26px;background:var(--card-ink);margin-left:-1px;transition:left .38s cubic-bezier(.2,.8,.2,1)}
+.mark::before{content:"";position:absolute;top:0;left:-4px;width:10px;height:10px;border-radius:50%;background:var(--card-ink)}
+
+.wp{display:grid;gap:12px}
+.wp-row{display:grid;grid-template-columns:minmax(0,1fr) auto;gap:4px 12px;align-items:baseline}
+.wp-name{font-size:13px;color:var(--card-muted)}
+.wp-val{font:500 14px var(--mono)}
+.bar{grid-column:1/-1;height:8px;background:var(--card-line);border-radius:2px;overflow:hidden}
+.bar i{display:block;height:100%;transition:width .38s cubic-bezier(.2,.8,.2,1)}
+.read{max-width:62ch;font-size:15px;color:var(--card-ink)}
+
+/* breakdown */
+.break{margin-top:28px}
+.sh{font:800 20px var(--display);letter-spacing:.08em;text-transform:uppercase;text-wrap:balance}
+.sub{margin-top:4px;color:var(--muted);font-size:14px}
+#rows{margin-top:12px}
+.brow{display:grid;grid-template-columns:minmax(0,1fr) auto;gap:2px 12px;padding:12px 0 14px;border-top:1px solid var(--line)}
+.bn{font-weight:600}
+.bv{font:500 15px var(--mono)}
+.bs{grid-column:1/-1;font:400 12px var(--mono);color:var(--muted)}
+.btrack{grid-column:1/-1;display:block;height:6px;margin-top:6px;border-radius:2px;background:var(--track);overflow:hidden}
+.btrack i{display:block;height:100%;background:var(--muted);transition:width .38s cubic-bezier(.2,.8,.2,1)}
+.brow.lead .btrack i{background:var(--accent)}
+.brow.zero{opacity:.55}
+
+/* algorithm */
+.algo{margin-top:64px;border-top:2px solid var(--ink);padding-top:22px}
+.steps{list-style:none;padding:0;margin-top:14px}
+.step{display:grid;gap:8px 20px;padding:16px 0;border-top:1px solid var(--line);grid-template-columns:minmax(0,1fr)}
+.step:first-child{border-top:0}
+.step .n{font:900 40px/.9 var(--display);color:var(--accent)}
+.step h3{font:700 17px var(--body)}
+.step p{color:var(--muted);font-size:14px;max-width:54ch;margin-top:4px}
+.now{align-self:start;font:500 12px/1.55 var(--mono);color:var(--ink);background:var(--surface);border:1px solid var(--line);border-radius:4px;padding:9px 11px;overflow-wrap:anywhere}
+@media (min-width:820px){
+  .step{grid-template-columns:56px minmax(0,1fr) minmax(0,1fr);align-items:start}
+}
+.two{display:grid;gap:28px;margin-top:28px;grid-template-columns:minmax(0,1fr)}
+@media (min-width:820px){.two{grid-template-columns:minmax(0,1fr) minmax(0,1fr);gap:36px}}
+.pre-wrap{overflow-x:auto;background:var(--surface);border:1px solid var(--line);border-radius:4px;margin-top:12px}
+pre{font:400 12.5px/1.7 var(--mono);padding:14px 16px;white-space:pre;color:var(--ink)}
+#tiers{list-style:none;padding:0;margin-top:12px}
+#tiers li{display:grid;grid-template-columns:14px 108px 58px minmax(0,1fr);gap:4px 10px;align-items:baseline;padding:9px 0;border-top:1px solid var(--line)}
+#tiers li i{display:block;width:14px;height:14px;border-radius:2px;align-self:center}
+#tiers b{font:800 17px var(--display);letter-spacing:.06em;text-transform:uppercase}
+#tiers .rg{font:500 12px var(--mono)}
+#tiers .nt{font-size:13px;color:var(--muted)}
+@media (max-width:520px){#tiers li{grid-template-columns:14px 100px minmax(0,1fr)} #tiers .nt{grid-column:2/-1}}
+.fine{margin-top:26px;max-width:70ch;font-size:13px;color:var(--muted)}
+
+@media (prefers-reduced-motion: reduce){*,*::before,*::after{transition:none!important;animation:none!important}}
+</style>
+
+<div class="wrap head-wrap">
+  <header class="head">
+    <h1>Turnover <em>Index</em></h1>
+    <p>One number from 0 to 100 for how much a single turnover moves a team's chance to win. Set up the play and watch the score and its parts change.</p>
+  </header>
+</div>
+
+<div class="mini" id="mini" aria-hidden="true">
+  <div class="mini-in">
+    <span class="mini-k">Index</span>
+    <b class="mini-n" id="miniNum">0</b>
+    <span class="mini-t" id="miniTier">Minor</span>
+    <span class="mini-w" id="miniWp"></span>
+  </div>
+</div>
+
+<div class="wrap main-wrap">
+  <main class="grid">
+    <div class="rail">
+      <div class="presets">
+        <span class="lab">Try a situation</span>
+        <div class="chips" id="chips"></div>
+      </div>
+
+      <div class="panel">
+        <section class="grp" aria-labelledby="h-clock">
+          <h2 class="gh" id="h-clock">Clock</h2>
+          <div class="ctl">
+            <span class="cl" id="l-q">Quarter</span>
+            <div class="seg" role="radiogroup" aria-labelledby="l-q" data-key="q">
+              <button type="button" role="radio" data-v="1">Q1</button>
+              <button type="button" role="radio" data-v="2">Q2</button>
+              <button type="button" role="radio" data-v="3">Q3</button>
+              <button type="button" role="radio" data-v="4">Q4</button>
+            </div>
+          </div>
+          <div class="ctl">
+            <label class="cl" for="s-clock">Time left in the quarter <output id="o-clock" for="s-clock"></output></label>
+            <input type="range" id="s-clock" min="0" max="900" step="5" value="180">
+          </div>
+        </section>
+
+        <section class="grp" aria-labelledby="h-score">
+          <h2 class="gh" id="h-score">Score</h2>
+          <div class="ctl">
+            <label class="cl" for="s-m">Margin, from the offense's side <output id="o-m" for="s-m"></output></label>
+            <input type="range" id="s-m" min="-28" max="28" step="1" value="-3">
+          </div>
+        </section>
+
+        <section class="grp" aria-labelledby="h-down">
+          <h2 class="gh" id="h-down">Down and field</h2>
+          <div class="ctl">
+            <span class="cl" id="l-down">Down</span>
+            <div class="seg" role="radiogroup" aria-labelledby="l-down" data-key="down">
+              <button type="button" role="radio" data-v="1">1st</button>
+              <button type="button" role="radio" data-v="2">2nd</button>
+              <button type="button" role="radio" data-v="3">3rd</button>
+              <button type="button" role="radio" data-v="4">4th</button>
+            </div>
+          </div>
+          <div class="ctl">
+            <label class="cl" for="s-dist">Yards to go <output id="o-dist" for="s-dist"></output></label>
+            <input type="range" id="s-dist" min="1" max="25" step="1" value="8">
+          </div>
+          <div class="ctl">
+            <label class="cl" for="s-v">Ball on <output id="o-v" for="s-v"></output></label>
+            <input type="range" id="s-v" min="1" max="99" step="1" value="40">
+          </div>
+        </section>
+
+        <section class="grp" aria-labelledby="h-to">
+          <h2 class="gh" id="h-to">Turnover</h2>
+          <div class="ctl">
+            <span class="cl" id="l-type">Type</span>
+            <div class="seg" role="radiogroup" aria-labelledby="l-type" data-key="type">
+              <button type="button" role="radio" data-v="int">Interception</button>
+              <button type="button" role="radio" data-v="fumble">Fumble</button>
+              <button type="button" role="radio" data-v="downs">On downs</button>
+            </div>
+          </div>
+          <div class="ctl" id="c-depth">
+            <label class="cl" for="s-depth">Intercepted this far downfield <output id="o-depth" for="s-depth"></output></label>
+            <input type="range" id="s-depth" min="0" max="40" step="1" value="14">
+          </div>
+          <div class="ctl">
+            <span class="cl" id="l-outcome">Outcome</span>
+            <div class="seg" role="radiogroup" aria-labelledby="l-outcome" data-key="outcome">
+              <button type="button" role="radio" data-v="spot">At the spot</button>
+              <button type="button" role="radio" data-v="return">Returned</button>
+              <button type="button" role="radio" data-v="td">Touchdown</button>
+            </div>
+          </div>
+          <div class="ctl" id="c-ret">
+            <label class="cl" for="s-ret">Return yards <output id="o-ret" for="s-ret"></output></label>
+            <input type="range" id="s-ret" min="1" max="60" step="1" value="10">
+          </div>
+          <p class="note" id="spotNote"></p>
+        </section>
+      </div>
+
+      <figure class="field">
+        <svg id="fieldSvg" viewBox="0 0 640 106" role="img" aria-label="Field diagram"></svg>
+        <figcaption class="fleg">
+          <span><i class="k k-los"></i>Line of scrimmage</span>
+          <span><i class="k k-ltg"></i>Line to gain</span>
+          <span><i class="k k-def"></i>Where the defense starts</span>
+          <span class="dir">Offense drives right</span>
+        </figcaption>
+      </figure>
+    </div>
+
+    <div class="out">
+      <section class="card" id="card" aria-label="Turnover swing result">
+        <div class="card-head">
+          <span class="eyebrow">Turnover Swing</span>
+          <span class="sit" id="sit"></span>
+        </div>
+        <div class="card-body">
+          <div class="numblk"><span class="num" id="num">0</span><span class="of">/ 100</span></div>
+          <div class="tierblk">
+            <div class="tier-name" id="tierName">Minor</div>
+            <div class="headline" id="headline"></div>
+            <div class="lev" id="lev"></div>
+          </div>
+        </div>
+        <div class="meter">
+          <div class="bands" id="bands"></div>
+          <div class="ticks" id="ticks"></div>
+          <div class="mark" id="mark"></div>
+        </div>
+        <div class="wp">
+          <div class="wp-row"><span class="wp-name">Offense win probability before</span><span class="wp-val" id="wpbv"></span><div class="bar"><i id="wpb" style="background:var(--c-before)"></i></div></div>
+          <div class="wp-row"><span class="wp-name">Offense win probability after</span><span class="wp-val" id="wpav"></span><div class="bar"><i id="wpa" style="background:var(--c-after)"></i></div></div>
+        </div>
+        <p class="read" id="read"></p>
+      </section>
+
+      <section class="break" aria-labelledby="h-break">
+        <h2 class="sh" id="h-break">Where the swing comes from</h2>
+        <p class="sub">In win-probability points. The three parts add up to the swing.</p>
+        <div id="rows"></div>
+      </section>
+    </div>
+  </main>
+
+  <section class="algo" aria-labelledby="h-algo">
+    <h2 class="sh" id="h-algo">How the number is built</h2>
+    <p class="sub">Every turnover runs through the same five steps. The grey boxes show the live values for the situation above.</p>
+    <ol class="steps">
+      <li class="step">
+        <span class="n">1</span>
+        <div><h3>Read the moment</h3><p>Quarter and clock, score margin, down and distance, and field position describe the play the offense was about to run.</p></div>
+        <div class="now" id="st1"></div>
+      </li>
+      <li class="step">
+        <span class="n">2</span>
+        <div><h3>Value the ball before</h3><p>Expected points (EP) say what a drive from this spot is worth: about 0.4 from the offense's own 20 and about 4.8 from the opponent's 10. Down and distance adjust it. On 4th down it uses the odds of converting.</p></div>
+        <div class="now" id="st2"></div>
+      </li>
+      <li class="step">
+        <span class="n">3</span>
+        <div><h3>Value the ball after</h3><p>The same table from where the defense takes over, after any return. A return touchdown counts as seven points, and the offense then receives the kickoff.</p></div>
+        <div class="now" id="st3"></div>
+      </li>
+      <li class="step">
+        <span class="n">4</span>
+        <div><h3>Turn points into win probability</h3><p>A bell curve whose spread narrows as the clock runs down, so a point late is worth far more than a point early. A team that leads and holds the ball late also gets credit for running the clock.</p></div>
+        <div class="now" id="st4"></div>
+      </li>
+      <li class="step">
+        <span class="n">5</span>
+        <div><h3>Subtract and label</h3><p>The swing is win probability before minus win probability after, on a scale from 0 to 100. It lands in one of five labels.</p></div>
+        <div class="now" id="st5"></div>
+      </li>
+    </ol>
+
+    <div class="two">
+      <div>
+        <h2 class="sh">The formulas</h2>
+        <div class="pre-wrap"><pre>weight         w(t)   = min(1, sqrt(t / 120))
+effective      E      = margin + EP x w(t)
+spread         s(t)   = sqrt(13.5^2 x t/3600
+                             + 5.5^2 x (1 - e^(-t/120))
+                             + 0.5^2)
+win prob       WP     = Phi(E / s(t))
+swing          Swing  = WP before - WP after
+
+t = seconds left in the game
+EP = expected points, offense positive
+Phi = standard normal curve</pre></div>
+      </div>
+      <div>
+        <h2 class="sh">The five labels</h2>
+        <ul id="tiers"></ul>
+        <p class="sub">The bar on the card stretches the low end so small swings stay readable.</p>
+      </div>
+    </div>
+
+    <p class="fine">This prototype uses hand-tuned constants so it runs entirely in the page. A production version would replace the expected-points table and the spread with models fit to play-by-play data, such as the free nflfastR dataset, and could add a final swing that updates once the opponent's drive ends.</p>
+  </section>
+</div>
+
+<script>
+/* Turnover Swing model: pure functions, shared by the page and the node check. */
+(function (root) {
+  'use strict';
+
+  var clamp = function (x, a, b) { return Math.max(a, Math.min(b, x)); };
+
+  // Expected points for a 1st & 10 (or 1st & goal) by yards to the goal line.
+  var EP_TABLE = [[1, 6.1], [5, 5.5], [10, 4.8], [20, 3.7], [30, 2.9], [40, 2.3],
+                  [50, 1.7], [65, 1.0], [75, 0.6], [80, 0.4], [90, 0.0], [99, -0.5]];
+
+  function ep1(y) {
+    y = clamp(y, 1, 99);
+    for (var i = 1; i < EP_TABLE.length; i++) {
+      var a = EP_TABLE[i - 1], b = EP_TABLE[i];
+      if (y <= b[0]) return a[1] + (b[1] - a[1]) * (y - a[0]) / (b[0] - a[0]);
+    }
+    return EP_TABLE[EP_TABLE.length - 1][1];
+  }
+
+  // Expected points for the offense before the snap.
+  function epOffense(ytg, down, dist) {
+    var d = Math.min(dist, ytg);
+    if (down < 4) {
+      var base = [0, -0.4, -0.9][down - 1];
+      return clamp(ep1(ytg) + base - 0.07 * (d - 10), -1.5, 6.6);
+    }
+    // 4th down: value of going for it.
+    var p = clamp(0.72 - 0.045 * (d - 1), 0.15, 0.72);
+    var conv = (ytg - d <= 0) ? 6.8 : ep1(ytg - d);
+    var fail = -ep1(100 - ytg);
+    return p * conv + (1 - p) * fail;
+  }
+
+  function Phi(x) {
+    var t = 1 / (1 + 0.2316419 * Math.abs(x));
+    var d = 0.3989423 * Math.exp(-x * x / 2);
+    var p = d * t * (0.3193815 + t * (-0.3565638 + t * (1.781478 + t * (-1.821256 + t * 1.330274))));
+    return x > 0 ? 1 - p : p;
+  }
+
+  // Spread of the final margin, in points, with t seconds left.
+  function sigma(t) {
+    return Math.sqrt(13.5 * 13.5 * t / 3600 + 5.5 * 5.5 * (1 - Math.exp(-t / 120)) + 0.25);
+  }
+
+  // A team that leads and holds the ball late can run the clock, so its result is less uncertain.
+  function clockKill(t) { return 0.4 + 0.6 * Math.min(1, t / 180); }
+
+  function wp(E, t, leaderHasBall) {
+    var sg = sigma(t);
+    if (leaderHasBall) sg *= clockKill(t);
+    return Phi(E / sg);
+  }
+
+  var TIERS = [
+    { min: 0,  name: 'Minor',        note: 'Barely moves the result' },
+    { min: 5,  name: 'Costly',       note: 'It hurts, with plenty of game left' },
+    { min: 12, name: 'Major',        note: 'A clear swing in who is favored' },
+    { min: 25, name: 'Game-changer', note: 'Late, close, or both' },
+    { min: 40, name: 'Backbreaker',  note: 'Usually a lead lost in the final minutes' }
+  ];
+
+  function tierIndex(S) {
+    var r = Math.round(S), idx = 0;
+    for (var i = 0; i < TIERS.length; i++) if (r >= TIERS[i].min) idx = i;
+    return idx;
+  }
+
+  /*
+    s = { q 1-4, clock 0-900 (seconds left in quarter), m margin for the offense,
+          down 1-4, dist, v yards from own goal (1-99),
+          type 'int' | 'fumble' | 'downs', depth (int only), outcome 'spot' | 'return' | 'td', ret }
+  */
+  function compute(s, isBase) {
+    var t = (4 - s.q) * 900 + s.clock;
+    var pf = Math.min(1, Math.sqrt(t / 120));
+    var sig = sigma(t);
+    var v = s.v, ytg = 100 - v;
+    var down = s.type === 'downs' ? 4 : s.down;
+    var dist = Math.min(s.dist, ytg);
+    var epB = epOffense(ytg, down, dist);
+    var Eb = s.m + epB * pf;
+
+    var spot = s.type === 'int' ? Math.min(100, v + s.depth) : v;
+    var touchback = spot >= 100;
+    var base = touchback ? 80 : spot;
+    var canReturn = s.type !== 'downs';
+    var td = canReturn && s.outcome === 'td';
+    var ret = 0;
+    if (canReturn && s.outcome === 'return') ret = clamp(s.ret, 0, Math.max(0, base - 1));
+    var defC = td ? 0 : base - ret;
+    var epDef = td ? 0 : ep1(defC);
+    var K = ep1(75);
+    var Ea = td ? s.m - 7 + K * pf : s.m - epDef * pf;
+
+    // Before: the offense holds the ball. After: the defense holds it, or the offense gets the kickoff after a return score.
+    var leadB = s.m > 0;
+    var leadA = td ? (s.m - 7 > 0) : (s.m < 0);
+    var wb = wp(Eb, t, leadB), wn = wp(s.m, t, false), wa = wp(Ea, t, leadA);
+    var a = (wb - wn) * 100;
+    var b = td ? 0 : (wn - wa) * 100;
+    var c = td ? (wn - wa) * 100 : 0;
+    var swing = Math.max(0, (wb - wa) * 100);
+
+    var out = {
+      t: t, pf: pf, sig: sig, down: down, dist: dist, ytg: ytg,
+      epB: epB, Eb: Eb, spot: spot, touchback: touchback, base: base,
+      td: td, ret: ret, defC: defC, epDef: epDef, K: K, Ea: Ea,
+      wb: wb, wn: wn, wa: wa, a: a, b: b, c: c, swing: swing,
+      tier: tierIndex(swing)
+    };
+    if (!isBase) {
+      var bs = compute(Object.assign({}, s, { q: 1, clock: 900, m: 0 }), true);
+      out.baseSwing = bs.swing;
+      out.lev = bs.swing > 0.05 ? swing / bs.swing : 0;
+    }
+    return out;
+  }
+
+  root.TurnoverModel = { compute: compute, ep1: ep1, epOffense: epOffense, sigma: sigma, wp: wp, TIERS: TIERS, tierIndex: tierIndex, clamp: clamp };
+})(typeof window !== 'undefined' ? window : globalThis);
+
+</script>
+<script>
+(function () {
+  'use strict';
+  var M = window.TurnoverModel;
+  var $ = function (id) { return document.getElementById(id); };
+  var reduce = !!(window.matchMedia && window.matchMedia('(prefers-reduced-motion: reduce)').matches);
+
+  var PRESETS = [
+    { name: 'Late pick-six',        s: { q: 4, clock: 180, m: -3,  down: 2, dist: 8,  v: 40, type: 'int',    depth: 14, outcome: 'td',     ret: 10 } },
+    { name: 'Red-zone pick',        s: { q: 4, clock: 250, m: -4,  down: 3, dist: 6,  v: 88, type: 'int',    depth: 12, outcome: 'spot',   ret: 10 } },
+    { name: 'Opening-drive fumble', s: { q: 1, clock: 800, m: 0,   down: 1, dist: 10, v: 30, type: 'fumble', depth: 12, outcome: 'spot',   ret: 10 } },
+    { name: 'Final-drive stop',     s: { q: 4, clock: 48,  m: -4,  down: 4, dist: 3,  v: 75, type: 'downs',  depth: 12, outcome: 'spot',   ret: 10 } },
+    { name: 'Garbage-time pick',    s: { q: 4, clock: 210, m: -21, down: 3, dist: 9,  v: 45, type: 'int',    depth: 10, outcome: 'return', ret: 12 } },
+    { name: 'Late scoop-and-score', s: { q: 4, clock: 120, m: 3,   down: 1, dist: 10, v: 28, type: 'fumble', depth: 12, outcome: 'td',     ret: 10 } }
+  ];
+
+  var state = Object.assign({}, PRESETS[0].s);
+  var active = 0;
+  var shown = null;
+  var raf = 0;
+
+  /* ---------- formatting ---------- */
+  function clockText(sec) { var m = Math.floor(sec / 60), s = sec % 60; return m + ':' + (s < 10 ? '0' : '') + s; }
+  function yl(v) { return v < 50 ? 'Own ' + v : v > 50 ? 'Opp ' + (100 - v) : '50'; }
+  function ord(n) { return ['1st', '2nd', '3rd', '4th'][n - 1]; }
+  function marginLong(m) { return m < 0 ? 'Trailing by ' + (-m) : m > 0 ? 'Leading by ' + m : 'Tied'; }
+  function marginShort(m) { return m < 0 ? 'Down ' + (-m) : m > 0 ? 'Up ' + m : 'Tied'; }
+  function pct(p) { var x = p * 100; return x > 99.5 ? '>99%' : x < 0.5 ? '<1%' : Math.round(x) + '%'; }
+  function fmt1(x) { return (x < 0 ? '−' : '') + Math.abs(x).toFixed(1); }
+  function sgn(x, d) { return (x < 0 ? '−' : '+') + Math.abs(x).toFixed(d); }
+  function defPhrase(c) { return c < 50 ? 'the offense’s ' + c : c > 50 ? 'its own ' + (100 - c) : 'midfield'; }
+  function pos(x) { return Math.sqrt(Math.min(100, x) / 100) * 100; }
+
+  /* ---------- one-time builds ---------- */
+  function buildChips() {
+    var box = $('chips');
+    PRESETS.forEach(function (p, i) {
+      var b = document.createElement('button');
+      b.type = 'button';
+      b.textContent = p.name;
+      b.setAttribute('data-i', String(i));
+      b.addEventListener('click', function () { state = Object.assign({}, p.s); active = i; render(); });
+      box.appendChild(b);
+    });
+  }
+
+  function buildMeter() {
+    var bands = $('bands'), ticks = $('ticks');
+    M.TIERS.forEach(function (t, i) {
+      var next = i + 1 < M.TIERS.length ? M.TIERS[i + 1].min : 100;
+      var el = document.createElement('i');
+      el.style.flex = (pos(next) - pos(t.min)) + ' 1 0';
+      el.style.background = 'var(--t' + (i + 1) + ')';
+      bands.appendChild(el);
+      var tk = document.createElement('span');
+      tk.textContent = String(t.min);
+      if (i === 0) { tk.style.left = '0'; } else { tk.style.left = pos(t.min) + '%'; tk.style.transform = 'translateX(-50%)'; }
+      ticks.appendChild(tk);
+    });
+    var end = document.createElement('span');
+    end.textContent = '100';
+    end.style.right = '0';
+    ticks.appendChild(end);
+  }
+
+  function buildLegend() {
+    var ul = $('tiers');
+    M.TIERS.forEach(function (t, i) {
+      var hi = i + 1 < M.TIERS.length ? M.TIERS[i + 1].min - 1 : null;
+      var li = document.createElement('li');
+      li.innerHTML = '<i style="background:var(--t' + (i + 1) + ')"></i><b>' + t.name + '</b><span class="rg">' +
+        (hi === null ? t.min + '+' : t.min + '–' + hi) + '</span><span class="nt">' + t.note + '</span>';
+      ul.appendChild(li);
+    });
+  }
+
+  /* ---------- field diagram ---------- */
+  function fieldMarkup(r) {
+    var X = function (c) { return +(40 + 5.6 * c).toFixed(1); };
+    var o = [];
+    o.push('<rect class="f-ez" x="0" y="20" width="40" height="60"/><rect class="f-ez" x="600" y="20" width="40" height="60"/><rect class="f-turf" x="40" y="20" width="560" height="60"/>');
+    for (var k = 1; k <= 9; k++) {
+      var gx = X(k * 10);
+      o.push('<line class="f-line" x1="' + gx + '" y1="20" x2="' + gx + '" y2="80"/>');
+      o.push('<text class="f-num" x="' + gx + '" y="97" text-anchor="middle">' + (k <= 5 ? k * 10 : (10 - k) * 10) + '</text>');
+    }
+    o.push('<line class="f-goal" x1="40" y1="20" x2="40" y2="80"/><line class="f-goal" x1="600" y1="20" x2="600" y2="80"/>');
+
+    var v = state.v, xl = X(v), ltg = v + r.dist;
+    if (ltg <= 100) o.push('<line class="f-ltg" x1="' + X(ltg) + '" y1="20" x2="' + X(ltg) + '" y2="80"/>');
+    o.push('<line class="f-los" x1="' + xl + '" y1="20" x2="' + xl + '" y2="80"/><circle class="f-ball" cx="' + xl + '" cy="50" r="5"/>');
+
+    var xs = X(r.spot), y2 = 66, xb = X(r.base);
+    if (state.type === 'int' && r.spot - v >= 2) {
+      o.push('<path class="f-arc" d="M' + xl + ' 50 Q' + ((xl + xs) / 2) + ' 4 ' + xs + ' 50"/>');
+    }
+    if (r.spot > v) {
+      o.push('<path class="f-x" d="M' + (xs - 5) + ' 45 L' + (xs + 5) + ' 55 M' + (xs + 5) + ' 45 L' + (xs - 5) + ' 55"/>');
+      o.push('<line class="f-drop" x1="' + xs + '" y1="57" x2="' + xs + '" y2="' + y2 + '"/>');
+    }
+    if (r.touchback) o.push('<line class="f-tb" x1="600" y1="' + y2 + '" x2="' + xb + '" y2="' + y2 + '"/>');
+
+    var xe = r.td ? 24 : X(r.defC);
+    if (r.td || r.ret > 0) {
+      var tip = r.td ? xe : xe + 7;
+      o.push('<line class="f-ret" x1="' + xb + '" y1="' + y2 + '" x2="' + (tip + 8) + '" y2="' + y2 + '"/>');
+      o.push('<polygon class="f-head" points="' + tip + ',' + y2 + ' ' + (tip + 10) + ',' + (y2 - 6) + ' ' + (tip + 10) + ',' + (y2 + 6) + '"/>');
+    }
+    if (r.td) o.push('<text class="f-td" x="20" y="48" text-anchor="middle">TD</text>');
+    else o.push('<circle class="f-def" cx="' + X(r.defC) + '" cy="' + y2 + '" r="6"/>');
+    return o.join('');
+  }
+
+  /* ---------- render ---------- */
+  function setNum(target, first) {
+    var el = $('num');
+    cancelAnimationFrame(raf);
+    if (first || reduce || shown === null || shown === target) { shown = target; el.textContent = String(target); return; }
+    var from = shown, t0 = performance.now(), dur = 360;
+    (function step(now) {
+      var k = Math.min(1, (now - t0) / dur);
+      k = 1 - Math.pow(1 - k, 3);
+      shown = Math.round(from + (target - from) * k);
+      el.textContent = String(shown);
+      if (k < 1) raf = requestAnimationFrame(step);
+    })(t0);
+  }
+
+  var firstRender = true;
+
+  function render() {
+    if (state.type === 'downs') { state.down = 4; state.outcome = 'spot'; }
+    var r = M.compute(state);
+    var S = r.swing, Sr = Math.round(S), tier = M.TIERS[r.tier];
+    var goal = state.dist >= r.ytg;
+    var dt = goal ? 'Goal' : String(r.dist);
+    var retMax = Math.max(1, r.base - 1);
+    if (state.ret > retMax) state.ret = retMax;
+    var where = yl(state.v);
+    var downTxt = ord(r.down) + ' & ' + dt;
+
+    /* presets */
+    Array.prototype.forEach.call(document.querySelectorAll('#chips button'), function (b) {
+      b.setAttribute('aria-pressed', String(+b.getAttribute('data-i') === active));
+    });
+
+    /* segmented controls */
+    Array.prototype.forEach.call(document.querySelectorAll('.seg'), function (seg) {
+      var key = seg.getAttribute('data-key');
+      Array.prototype.forEach.call(seg.querySelectorAll('button'), function (b) {
+        var val = b.getAttribute('data-v');
+        b.setAttribute('aria-checked', String(String(state[key]) === val));
+        var dis = false;
+        if (state.type === 'downs') {
+          if (key === 'down' && val !== '4') dis = true;
+          if (key === 'outcome' && val !== 'spot') dis = true;
+        }
+        b.disabled = dis;
+      });
+    });
+
+    /* sliders */
+    function sl(k, text, noFill) {
+      var el = $('s-' + k);
+      el.value = state[k];
+      el.style.setProperty('--p', (noFill ? 0 : (state[k] - el.min) / (el.max - el.min) * 100) + '%');
+      $('o-' + k).textContent = text;
+    }
+    $('s-ret').max = String(retMax);
+    sl('clock', clockText(state.clock));
+    sl('m', marginLong(state.m), true);
+    sl('dist', goal ? '& Goal' : '& ' + state.dist);
+    sl('v', where);
+    sl('depth', state.depth + ' yds');
+    sl('ret', state.ret + ' yds');
+    $('c-depth').hidden = state.type !== 'int';
+    $('c-ret').hidden = !(state.outcome === 'return' && state.type !== 'downs');
+
+    /* outcome note under the controls */
+    var note;
+    if (state.type === 'downs') note = 'The offense is stopped on 4th down. The defense takes over at the spot, ' + defPhrase(r.defC) + '.';
+    else if (r.td) note = 'Returned for a touchdown. The offense receives the kickoff.';
+    else if (r.touchback) note = 'Caught in the end zone, so it is a touchback. ' + (r.ret > 0 ? 'The defense returns it ' + r.ret + ' yards from its own 20, to ' + defPhrase(r.defC) + '.' : 'The defense starts at its own 20.');
+    else note = 'The defense takes over at ' + defPhrase(r.defC) + (r.ret > 0 ? ', after a ' + r.ret + '-yard return.' : '.');
+    $('spotNote').textContent = note;
+
+    /* field */
+    $('fieldSvg').innerHTML = fieldMarkup(r);
+    $('fieldSvg').setAttribute('aria-label', 'Field diagram. The offense has the ball at ' + where + '. ' + note);
+
+    /* card */
+    var sit = 'Q' + state.q + ' ' + clockText(state.clock) + ' · ' + marginShort(state.m) + ' · ' + downTxt + ' at ' + where;
+    $('sit').textContent = sit;
+    var tn = { int: 'Interception', fumble: 'Fumble lost', downs: 'Turnover on downs' }[state.type];
+    $('headline').textContent = tn + (r.td ? ', returned for a touchdown' : (r.touchback && r.ret === 0) ? ', touchback' : r.ret > 0 ? ', returned ' + r.ret + ' yards' : '');
+    $('tierName').textContent = tier.name;
+    var tv = 'var(--t' + (r.tier + 1) + ')';
+    $('card').style.setProperty('--tier', tv);
+    $('mini').style.setProperty('--tier', tv);
+    setNum(Sr, firstRender);
+
+    if (r.baseSwing > 0.05) {
+      $('lev').textContent = (r.lev >= 0.1 ? r.lev.toFixed(1) + '×' : '<0.1×') + ' the same turnover in a tied first quarter';
+    } else { $('lev').textContent = ''; }
+
+    $('mark').style.left = pos(S) + '%';
+    Array.prototype.forEach.call($('bands').children, function (el, i) { el.classList.toggle('on', i === r.tier); });
+    $('wpb').style.width = (r.wb * 100) + '%';
+    $('wpa').style.width = (r.wa * 100) + '%';
+    $('wpbv').textContent = pct(r.wb);
+    $('wpav').textContent = pct(r.wa);
+
+    var parts = ['Win probability falls from ' + pct(r.wb) + ' to ' + pct(r.wa) + '.'];
+    if (r.td) parts.push('The defense scores seven, and the offense gets the ball back on a kickoff.');
+    else parts.push('The defense takes over at ' + defPhrase(r.defC) + ', worth about ' + fmt1(r.epDef) + ' expected points.');
+    var b0 = Math.round(r.baseSwing);
+    if (S < 3 && (r.wb >= 0.97 || r.wb <= 0.03)) {
+      parts.push(r.wb >= 0.97 ? 'The offense was already far ahead, so the result barely moves.' : 'The game was nearly out of reach before this play.');
+    } else if (r.t <= 600 && Math.abs(state.m) <= 8) {
+      parts.push('It came late in a one-score game.' + (r.lev >= 1.25 ? ' The same turnover in a tied first quarter would score ' + b0 + '.' : ''));
+    } else if (r.t > 2700) {
+      parts.push('Early on, a turnover is one drive of many.');
+    } else {
+      parts.push('There is still time to answer, which holds the swing down.');
+    }
+    $('read').textContent = parts.join(' ');
+
+    /* mini bar */
+    $('miniNum').textContent = String(Sr);
+    $('miniTier').textContent = tier.name;
+    $('miniWp').textContent = pct(r.wb) + ' → ' + pct(r.wa);
+
+    /* breakdown */
+    var rows = [
+      { n: 'Drive lost', s: 'Offense EP ' + sgn(r.epB, 1) + ' at ' + downTxt + ', ' + where, v: r.a },
+      { n: 'Field position given', s: r.td ? 'Replaced by the return score' : 'Defense EP ' + fmt1(r.epDef) + ' from ' + defPhrase(r.defC), v: r.b },
+      { n: 'Return touchdown', s: r.td ? 'Seven points, then a kickoff worth EP ' + sgn(r.K, 1) : 'No score on the return', v: r.c }
+    ];
+    var maxv = 0.0001, lead = 0;
+    rows.forEach(function (x, i) { if (Math.abs(x.v) > maxv) { maxv = Math.abs(x.v); lead = i; } });
+    $('rows').innerHTML = rows.map(function (x, i) {
+      var zero = Math.abs(x.v) < 0.05;
+      var w = zero ? 0 : Math.min(100, Math.abs(x.v) / maxv * 100);
+      return '<div class="brow' + (i === lead && !zero ? ' lead' : '') + (zero ? ' zero' : '') + '"><span class="bn">' + x.n + '</span><span class="bv">' +
+        (zero ? '—' : fmt1(x.v)) + '</span><span class="bs">' + x.s + '</span><span class="btrack"><i style="width:' + w + '%"></i></span></div>';
+    }).join('');
+
+    /* algorithm, live values */
+    $('st1').textContent = 'Q' + state.q + ' ' + clockText(state.clock) + ' (' + r.t + ' s left), ' + marginShort(state.m).toLowerCase() + ', ' + downTxt + ' at ' + where;
+    $('st2').textContent = 'EP ' + sgn(r.epB, 1) + (r.pf < 0.995 ? ' × ' + r.pf.toFixed(2) : '') + ' → effective margin ' + sgn(r.Eb, 1);
+    $('st3').textContent = r.td
+      ? 'Seven points, then kickoff EP ' + sgn(r.K, 1) + (r.pf < 0.995 ? ' × ' + r.pf.toFixed(2) : '') + ' → effective margin ' + sgn(r.Ea, 1)
+      : 'Defense at ' + defPhrase(r.defC) + ' → EP ' + fmt1(r.epDef) + (r.pf < 0.995 ? ' × ' + r.pf.toFixed(2) : '') + ' → effective margin ' + sgn(r.Ea, 1);
+    $('st4').textContent = 'Spread σ = ' + r.sig.toFixed(1) + ' pts → ' + pct(r.wb) + ' before, ' + pct(r.wa) + ' after';
+    $('st5').textContent = (r.wb * 100).toFixed(1) + ' − ' + (r.wa * 100).toFixed(1) + ' = ' + S.toFixed(1) + ' → ' + tier.name;
+
+    firstRender = false;
+  }
+
+  /* ---------- events ---------- */
+  function touched() { active = null; render(); }
+
+  Array.prototype.forEach.call(document.querySelectorAll('.seg'), function (seg) {
+    seg.addEventListener('click', function (e) {
+      var b = e.target.closest ? e.target.closest('button') : null;
+      if (!b || b.disabled) return;
+      var key = seg.getAttribute('data-key'), val = b.getAttribute('data-v');
+      state[key] = (key === 'q' || key === 'down') ? +val : val;
+      if (key === 'type' && val === 'downs') { state.down = 4; state.outcome = 'spot'; }
+      touched();
+    });
+  });
+
+  ['clock', 'm', 'dist', 'v', 'depth', 'ret'].forEach(function (k) {
+    $('s-' + k).addEventListener('input', function () { state[k] = +this.value; touched(); });
+  });
+
+  buildChips();
+  buildMeter();
+  buildLegend();
+  render();
+})();
+
+</script>
+
+</body></html>
