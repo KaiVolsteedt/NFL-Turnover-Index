@@ -1,5 +1,5 @@
 <!doctype html><html><head><meta charset=utf8><meta name=viewport content="width=device-width,initial-scale=1,viewport-fit=cover"><style>:root{color-scheme:light;box-sizing:border-box;padding-top:env(safe-area-inset-top,0px);padding-bottom:env(safe-area-inset-bottom,0px)}html{scroll-padding-top:env(safe-area-inset-top,0px)}body{margin:0;padding:0;font:14px -apple-system,BlinkMacSystemFont,sans-serif;background:#fff;color:#000}img{max-width:100%}[hidden]:not([hidden=until-found i]){display:none!important}</style></head><body>
-<title>Turnover Swing</title>
+<title>Turnover Index</title>
 <meta name="claude:viewport-fit-sides" content="cover">
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
@@ -303,9 +303,9 @@ pre{font:400 12.5px/1.7 var(--mono);padding:14px 16px;white-space:pre;color:var(
     </div>
 
     <div class="out">
-      <section class="card" id="card" aria-label="Turnover swing result">
+      <section class="card" id="card" aria-label="Turnover Index result">
         <div class="card-head">
-          <span class="eyebrow">Turnover Swing</span>
+          <span class="eyebrow">Turnover Index</span>
           <span class="sit" id="sit"></span>
         </div>
         <div class="card-body">
@@ -329,8 +329,8 @@ pre{font:400 12.5px/1.7 var(--mono);padding:14px 16px;white-space:pre;color:var(
       </section>
 
       <section class="break" aria-labelledby="h-break">
-        <h2 class="sh" id="h-break">Where the swing comes from</h2>
-        <p class="sub">In win-probability points. The three parts add up to the swing.</p>
+        <h2 class="sh" id="h-break">Where the Index comes from</h2>
+        <p class="sub">In win-probability points. The three parts add up to the Index.</p>
         <div id="rows"></div>
       </section>
     </div>
@@ -362,7 +362,7 @@ pre{font:400 12.5px/1.7 var(--mono);padding:14px 16px;white-space:pre;color:var(
       </li>
       <li class="step">
         <span class="n">5</span>
-        <div><h3>Subtract and label</h3><p>The swing is win probability before minus win probability after, on a scale from 0 to 100. It lands in one of five labels.</p></div>
+        <div><h3>Subtract and label</h3><p>The Index is win probability before minus win probability after, on a scale from 0 to 100. It lands in one of five labels.</p></div>
         <div class="now" id="st5"></div>
       </li>
     </ol>
@@ -376,7 +376,7 @@ spread         s(t)   = sqrt(13.5^2 x t/3600
                              + 5.5^2 x (1 - e^(-t/120))
                              + 0.5^2)
 win prob       WP     = Phi(E / s(t))
-swing          Swing  = WP before - WP after
+Index          Index  = WP before - WP after
 
 t = seconds left in the game
 EP = expected points, offense positive
@@ -394,7 +394,7 @@ Phi = standard normal curve</pre></div>
 </div>
 
 <script>
-/* Turnover Swing model: pure functions, shared by the page and the node check. */
+/* Turnover Index model: pure functions, shared by the page and the node check. */
 (function (root) {
   'use strict';
 
@@ -496,19 +496,19 @@ Phi = standard normal curve</pre></div>
     var a = (wb - wn) * 100;
     var b = td ? 0 : (wn - wa) * 100;
     var c = td ? (wn - wa) * 100 : 0;
-    var swing = Math.max(0, (wb - wa) * 100);
+    var Index = Math.max(0, (wb - wa) * 100);
 
     var out = {
       t: t, pf: pf, sig: sig, down: down, dist: dist, ytg: ytg,
       epB: epB, Eb: Eb, spot: spot, touchback: touchback, base: base,
       td: td, ret: ret, defC: defC, epDef: epDef, K: K, Ea: Ea,
-      wb: wb, wn: wn, wa: wa, a: a, b: b, c: c, swing: swing,
-      tier: tierIndex(swing)
+      wb: wb, wn: wn, wa: wa, a: a, b: b, c: c, Index: Index,
+      tier: tierIndex(Index)
     };
     if (!isBase) {
       var bs = compute(Object.assign({}, s, { q: 1, clock: 900, m: 0 }), true);
-      out.baseSwing = bs.swing;
-      out.lev = bs.swing > 0.05 ? swing / bs.swing : 0;
+      out.baseIndex = bs.Index;
+      out.lev = bs.Index > 0.05 ? Index / bs.Index : 0;
     }
     return out;
   }
@@ -650,7 +650,7 @@ Phi = standard normal curve</pre></div>
   function render() {
     if (state.type === 'downs') { state.down = 4; state.outcome = 'spot'; }
     var r = M.compute(state);
-    var S = r.swing, Sr = Math.round(S), tier = M.TIERS[r.tier];
+    var S = r.Index, Sr = Math.round(S), tier = M.TIERS[r.tier];
     var goal = state.dist >= r.ytg;
     var dt = goal ? 'Goal' : String(r.dist);
     var retMax = Math.max(1, r.base - 1);
@@ -718,7 +718,7 @@ Phi = standard normal curve</pre></div>
     $('mini').style.setProperty('--tier', tv);
     setNum(Sr, firstRender);
 
-    if (r.baseSwing > 0.05) {
+    if (r.baseIndex > 0.05) {
       $('lev').textContent = (r.lev >= 0.1 ? r.lev.toFixed(1) + '×' : '<0.1×') + ' the same turnover in a tied first quarter';
     } else { $('lev').textContent = ''; }
 
@@ -732,7 +732,7 @@ Phi = standard normal curve</pre></div>
     var parts = ['Win probability falls from ' + pct(r.wb) + ' to ' + pct(r.wa) + '.'];
     if (r.td) parts.push('The defense scores seven, and the offense gets the ball back on a kickoff.');
     else parts.push('The defense takes over at ' + defPhrase(r.defC) + ', worth about ' + fmt1(r.epDef) + ' expected points.');
-    var b0 = Math.round(r.baseSwing);
+    var b0 = Math.round(r.baseIndex);
     if (S < 3 && (r.wb >= 0.97 || r.wb <= 0.03)) {
       parts.push(r.wb >= 0.97 ? 'The offense was already far ahead, so the result barely moves.' : 'The game was nearly out of reach before this play.');
     } else if (r.t <= 600 && Math.abs(state.m) <= 8) {
@@ -740,7 +740,7 @@ Phi = standard normal curve</pre></div>
     } else if (r.t > 2700) {
       parts.push('Early on, a turnover is one drive of many.');
     } else {
-      parts.push('There is still time to answer, which holds the swing down.');
+      parts.push('There is still time to answer, which holds the Index down.');
     }
     $('read').textContent = parts.join(' ');
 
